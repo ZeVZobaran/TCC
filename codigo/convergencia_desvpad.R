@@ -139,8 +139,8 @@ gera_stats_sample <- function(sample, market, weights = 'equal', return=FALSE){
   level_desvpads <- tibble(
     desvpads = numeric()
   )
-  for (pf in sample){
-    covvar <- market[, pf] %>%
+    for (pf in sample){
+    covvar <- as.matrix(market[, pf]) %>%
       cov() # Para cada portfolio samplado, gera a matriz de covvar e o desvpad do pf (abaixo)
     desvpad <-sqrt(t(weights_vector)%*%covvar%*%weights_vector)
     level_desvpads = add_row(level_desvpads,
@@ -182,6 +182,7 @@ gera_pontos <- function(info_levels, market){
   info_levels deve ser o output de gera_samples
   '
   curva_convergencia <- map(info_levels$samples, gera_stats_sample, market) %>%
+    # Passa cada nível pela gera_stats_sample
     bind_rows() %>%
     left_join(info_levels, by = 'level')
   return(curva_convergencia)
@@ -272,13 +273,13 @@ graficos_normalidade <- function(samples, out_path, ext='pdf'){
 # Teste sem timeout:
 load("C:/Users/josez/Desktop/Economia/FEA/TCC/dados/IbovData.RDS") # Dados do IBOV já tydied
 market <- IBOV_Returns_Final
-sample <- 5000
+sample_size <- 5000
 out_path <- 'C:/Users/josez/Desktop/Economia/FEA/TCC/graficos'
 
 info_levels <- gera_samples(
   market = market,
   timeout = FALSE,
-  constant_sample_size = sample
+  constant_sample_size = sample_size
 )
 
 desvpads_por_nivel <- gera_pontos(
@@ -289,7 +290,7 @@ desvpads_por_nivel <- gera_pontos(
 plota_curva(
   market = market,
   curva_convergencia = desvpads_por_nivel,
-  sample = sample,
+  sample = sample_size,
   out_path = file.path(out_path, 'curva_convergencia')
 )
 
