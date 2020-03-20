@@ -1,0 +1,41 @@
+Funções:
+	Downloads
+	formatação/tidying
+	gera_portfolio(n, bolsa, ja_gerados)
+		n = quantidade de acoes no portfolio, ja_gerados = porfolios já usados, bolsa = ativos possíveis
+		timeout = tempo limite de run
+		Gera o portfolio com n ações, checa se está em ja_gerados, se não estiver outputa, se estiver tenta de novo
+
+	calcula_info(portfolios, dp=True, r=False)
+		recebe um portfolio, retorna o desvio padrão dele formatado bonitinho. Se r, retorna tb o retorno
+
+	benchmark(portfolios)
+		Reporta o tempo que levaria para gerar o ponto desses portfolios (passar todos eles por calcula_info, tirar a média e dp dos outputs de calcula_info). 
+
+	gera_timeout(bolsa, timeout)
+		bolsa - ativos possiveis, timeout = tempo máximo de cálculo
+		Com ja_gerados = [], passa gera_portfolio(n, bolsa, ja_gerados) dentro de um while. Cada portfolio é passado por calcula_info e posto na lista ja_gerados. Então, passa ja_gerados por benchmark(). Quando o resultado de benchmark for maior do que o timeout especificado, trava n.
+		Com isso, cada nível da bolsa terá uma lista de tamanho específico, estabelecida pelo seu timeout. Se quisermos usar apenas um N e variar o timeout, basta usar sempre o N de len(bolsa)/2, que será o menor possível (por ser o que mais demora)
+		Outputa para cada nível da bolsa a lista com os portfolios, o tamanho dela e o tamanho do universo de combinações possíveis
+
+	gera_ponto(portfolios):
+		Passa todos os portfolios passados por calcula_info(). Calcula a média e desv_pad dos desv_pads gerados, devolve isso.
+
+	gera_curva(lista_portfolios, bolsa)
+		Recebe lista_portfolios, o output de gera_timeout; e bolsa
+		sample_size será = N estabelecido para o ponto de quantidade maxima de combinações possíveis (len(bolsa)/2).
+		Para cada nível da bolsa, primeiro gera um subset de portfolios de tamanho sample_size. Por definição, esse subset será menor do que o N estabelecido para todos os pontos salvo o ponto máximo (em que será igual). Nos primeiros e últimos pontos, além disso, o N estabelecido será igual ao universo de combinações possíveis.
+		Para cada nível, passa tanto o subset de portfolios quanto o universo possível dentro do timeout por gera_ponto() e adiciona os dois resultados em um df a ser outputado, de estrutura (indice = nível, colunas = [media(desv_pad(k)), desv_pad(desv_pad(n)), media(desv_pad(k)), desv_pad(desv_pad(k)), k, n, universo_possivel]).
+		Outputa esse df para todos os Ns
+
+	testes(curva):
+		Recebe o output de gera_curva. Para cada nível, testa se os resultados relacionados a N estão "dentro" de K, ou se são compatíveis com ele. Se não for, gera um flag naquele ponto.
+		Cada ponto flagueado precisaria ser rerodado com um timeout/N maiores, até que os testes fossem satisfeitos
+
+	rerun(curva, flags):
+		Recebe a curva de gera_curva e as flags relacionadas de testes
+		Reroda os pontos específicos que foram flageuados com n = n +10, re-passa eles por testes. Repete até todas as flags serem nulas.
+
+	monta_curva()
+		Monta a curva de convergência ao desvpad de mercado
+		
