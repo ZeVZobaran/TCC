@@ -1,6 +1,6 @@
 library(xlsx)
 library(tidyverse)
-
+library(ggpubr)
 # Auxiliares
 
 gera_subtitulo <- function(sample, timeout, weights){
@@ -291,7 +291,7 @@ plota_curva(
   market = market,
   curva_convergencia = desvpads_por_nivel,
   sample = sample_size,
-  out_path = file.path(out_path, 'curva_convergencia')
+  out_path = file.path(out_path, 'curva_convergencia/curva_convergencia')
 )
 
 graficos_normalidade(
