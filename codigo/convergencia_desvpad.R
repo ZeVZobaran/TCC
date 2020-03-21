@@ -8,9 +8,9 @@ gera_subtitulo <- function(sample, timeout, weights){
   '
   Auxiliar para gerar o subtítulo dos gráficos
   '
-  sample_title <- 'Médias dos desvios padrões do retorno dos portifólios calculados para cada tamanho de portifólio'
+  primeira_linha <- 'Médias dos desvios padrões do retorno dos portifólios calculados para cada tamanho de portifólio\n'
   if (sample){
-    sample_title <- paste('Até ', as.character(sample), "portifólios calculados para cada ponto\n")
+    sample_title <- paste('Até', as.character(sample), "portifólios calculados para cada ponto\n")
   } else {sample_title <- ""}
   if (timeout) {
     timeout_title <- paste("Tempo máximo para o cálculo de cada ponto:", as.character(timeout), " minutos\n")
@@ -18,7 +18,7 @@ gera_subtitulo <- function(sample, timeout, weights){
   if (weights == "equal") {
     pesos_title <- "Pesos: constantes"
   } else {pesos_title <- ""}
-  subtitle <- paste(timeout_title, sample_title, pesos_title)
+  subtitle <- paste(primeira_linha, timeout_title, sample_title, pesos_title)
   return(subtitle)
 }
 
