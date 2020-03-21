@@ -1,5 +1,6 @@
 library(xlsx)
 library(tidyverse)
+library(tidyquant)
 library(ggpubr)
 # Auxiliares
 
@@ -7,18 +8,20 @@ gera_subtitulo <- function(sample, timeout, weights){
   '
   Auxiliar para gerar o subtítulo dos gráficos
   '
+  sample_title <- 'Médias dos desvios padrões do retorno dos portifólios calculados para cada tamanho de portifólio'
   if (sample){
-    sample_title <- paste(as.character(sample), "portifólios simulados para cada ponto;")
+    sample_title <- paste('Até ', as.character(sample), "portifólios calculados para cada ponto\n")
   } else {sample_title <- ""}
   if (timeout) {
-    timeout_title <- paste("Tempo máximo para o cálculo de cada ponto:", as.character(timeout), " minutos; ")
+    timeout_title <- paste("Tempo máximo para o cálculo de cada ponto:", as.character(timeout), " minutos\n")
   } else {timeout_title <- ""}
   if (weights == "equal") {
-    pesos_title <- "Estrutura de pesos: constantes"
+    pesos_title <- "Pesos: constantes"
   } else {pesos_title <- ""}
   subtitle <- paste(timeout_title, sample_title, pesos_title)
   return(subtitle)
 }
+
 
 gera_filename <- function(out_path, ext = 'png', infos){
   '
@@ -33,6 +36,7 @@ gera_filename <- function(out_path, ext = 'png', infos){
 }
 
 
+
 normality_by_moments <- function(sample, sig = 1){
   '  Testes de normalidade como o Shapiro e o JB falham em amostras muito grandes
    Visto que qualquer esvio da curtose ou simetria ficam significantes
@@ -41,8 +45,8 @@ normality_by_moments <- function(sample, sig = 1){
    "o bastante" é definido como menor do que sig em módulo
    sig é settado pra 1
   '
-  if ((length(sample)) < 500){
-    shapiro_val = shapiro.test(sample)
+  if (length(sample) < 500){
+    shapiro_val = shapiro.test(sample)[[2]]
     result <- (shapiro_val > 0.05)
     return(result)
   }  # Se a amostra for pequena o bastante, basta rodar o shapiro
@@ -194,7 +198,7 @@ gera_pontos <- function(info_levels, market){
 
 plota_curva <- function(
   market, curva_convergencia, out_path = TRUE, weights = 'equal',
-  sample = FALSE, timeout = FALSE, ext = 'pdf', save = TRUE
+  sample = FALSE, timeout = FALSE, ext = 'png', save = TRUE
   ){
   '
   Recebe o outrput de gera_stats_sample, gera e outputa a curva de convergência
@@ -202,33 +206,42 @@ plota_curva <- function(
   '
   mkt_desvpad = tail(curva_convergencia$mean_desvpad, n=1) 
   subtitulo <- gera_subtitulo(sample, timeout, weights)
-  ggplot(data = curva_convergencia, mapping = aes(x = level)) + 
-    geom_point(mapping = aes(y = mean_desvpad, color = normal)) +
-    geom_line(mapping = aes(y = p025_desvpad, linetype = "P[0.025, 0.975]")) +
-    geom_line(mapping = aes(y = p975_desvpad, linetype = "P[0.025, 0.975]")) +
+  data_graph <- curva_convergencia %>% # Tranformações para o gráfico ficar mais bonito
+    mutate(
+      normal_text = ifelse(normal, 'Curtose e assimetria < 1 em módulo', 'Curtose e assimetria > 1 em módulo'),
+      amostral_text = ifelse((pct_sampled==1), 'Média do desvio padrão populacional', 'Média do desvio padrão amostral'),
+      p025_amostral = ifelse((pct_sampled==1), NA, p025_desvpad),
+      p975_amostral = ifelse((pct_sampled==1), NA, p975_desvpad),
+      upper_sd =  ifelse((pct_sampled==1), NA, mean_desvpad + sd_desvpads),
+      lower_sd =  ifelse((pct_sampled==1), NA, mean_desvpad - sd_desvpads),
+    )
+  ggplot(data = data_graph, mapping = aes(x = level)) + 
+    geom_point(mapping = aes(y = mean_desvpad, color = normal_text, shape = amostral_text)) +
+    geom_line(mapping = aes(y = p025_amostral, linetype = "P[0.025, 0.975]")) +
+    geom_line(mapping = aes(y = p975_amostral, linetype = "P[0.025, 0.975]")) +
     geom_ribbon(mapping = aes(
-      ymax = (mean_desvpad + sd_desvpads),
-      ymin = (mean_desvpad - sd_desvpads),
+      ymax = (upper_sd),
+      ymin = (lower_sd),
       fill = '±1SD'
       ),
       alpha = 0.3) +
     geom_hline(mapping = aes(
       yintercept = mkt_desvpad, linetype = 'Desvio padrão do mercado'
       )) +
-    labs(x = "Quantidade de ações no portifólio", y = 'Desvio Padrão') +
+    labs(x = "Tamanho do portifólio (Quantidade de ações contidas)", y = 'Desvio Padrão') +
     labs(title = "Convergência do desvio padrão de portifólios aleatórios para o do mercado") +
     labs(subtitle = subtitulo) +
-    labs(color = 'Kurt e Assym < 1 em módulo') +
+    labs(color = NULL) +
+    labs(shape = NULL) +
     labs(fill = NULL) +
     labs(linetype = NULL) +
     labs(line='t') +
     theme_minimal()
-  # TODO salvar resultado
   if (save){
     filename <- gera_filename(
     out_path, ext, list(as.character(sample), 'timeout', as.character(timeout))
     )
-    ggsave(filename)
+    ggsave(filename, width=450, height=200, units = 'mm')
     }
 }
 
@@ -273,7 +286,7 @@ graficos_normalidade <- function(samples, out_path, ext='pdf'){
 # Teste sem timeout:
 load("C:/Users/josez/Desktop/Economia/FEA/TCC/dados/IbovData.RDS") # Dados do IBOV já tydied
 market <- IBOV_Returns_Final
-sample_size <- 5000
+sample_size <- 500000
 out_path <- 'C:/Users/josez/Desktop/Economia/FEA/TCC/graficos'
 
 info_levels <- gera_samples(
