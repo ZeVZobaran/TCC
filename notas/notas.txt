@@ -1,34 +1,23 @@
-# O total de fronteiras que teríamos que estimar é 
-    # 1 quinquilhão, 152 quatrilhões, 921 trilhões, 504 bilhões, 606 milhões, 847 mil
-# A solução extensiva é absolutamente impraticável
+Fazer os gráficos para outros tipos de portifólios
+	Value, Max Shapre, R = R mercado, GMV
+Discussão de noermalidade - apresentar logo uma imagem para cada tipo de portfólio e se libvrar da discussão em uma tacada só
 
-# Opçao 1:
-    # sampling; ao invés de estabelecermos o melhor portfolio em cada universo,
-    # definimos apenas o portfolio médio e o stdDev dele.
-        # com o dado de stdDev, sabemos qual a probabilidade de o pf convergir
-        # já aqui, pois sabemos qual é a chance de um pf solto ser
-        # x% melhor do que o médio
+Desvios padrão - apresentar como % do desvpad de mercado
 
-# Opção 2:
-    # Rodar até atingir um "nível" de convergência, sem chegar ao 60, com um timeout. 
-        # Como ja em um universo de 10 ações nós superamos a marca do bilhão,
-        # talvez só não funcione e bata no timeout muito antes de se aprox. 
-        # de convergir
 
-# Opção 3:
-    # Opção 3, com imposição de pesos constantes
-    # Talvez isso não baste para corregir o defeito da 2
+Definição de custo marginal:
+	Ganho perdido por não se alavancar/custos operacionais?
+		Custo: operacional. Benefício: VOl reduzida. Metedodo de comparação: Alavancar o pf n-1 até atingir a vol do n; com isso, vol é convertida em retorno (o custo de vol reduzida é exatamente o retorno adicional desse pf alavancado)
+		Plot de custo - y = (custo operacional mg/ganho por queda de vol mg); x = num de ativos; quando y=1, chegamos no ponto desejado (0 se reduzir uma ordem) 
 
-# Opção 4:
-    # Opção 1 e 3;
-    # para cada nível rodar até convergir internamente, com pesos fixos, e só
-    # rodar níveis até convergir, não até o 60 necessariamente
 
-# Opção 5:
-    # Estima, para o portfolio de mercado, StdDev e meanR
-    # A partir disso, otimiza UM portfólio em cada universo, explicitando de cara
-    # o retorno ou variância alvo dele
-    # para isso, requeremos um pacote ou algo que ainda não temos
+Metodologia p/ nível ótimo:
+	Puramente economica, como no paper
+	Puramente estatítisca: média (n) = média (n-1) - Cmg
+		Problema - ainda que Ganho MG de n para n+1 seja nulo, ganho para n+3 pode ser relevante
+			Solução: Gráficos - linear, só n/n+1; matriz de resultados em heatmap, com relevantes em azul, para cruzamento cheio
 
-# Opção 6:
-    # Solução analítica
+
+Adicionar demonstração matemática do problema de potência de testes de normalidade
+
+Testar risco idiossincrático igual à banda inferior de um sd
