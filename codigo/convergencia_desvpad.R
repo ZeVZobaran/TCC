@@ -31,7 +31,6 @@ normality_by_moments <- function(sample, sig = 1){
 }
 
 
-
 get_stats_benchmark(assets){
   '
   recebe uma lista de assets
@@ -73,11 +72,12 @@ gera_samples <- function(market, timeout=False, constant_sample_size=False){
     if (is.numeric(constant_sample_size)){
       sample_size <- min(c(constant_sample_size, max_pfs))
       pfs_in_sample = sample_size
-      last_samples <- replicate(pfs_in_sample, sample(tickers, size=n)) %>%
+      last_samples <- replicate(pfs_in_sample, sort(sample(tickers, size=n))) %>%
         as_tibble()
+      # Sort logo na base pra que tudo que for feito esteja sempre em ordem alfabética
+      # Faz com que não se precise sortar em outros lugares
       if (n==1){last_samples <- t(last_samples)}
-    } 
-    else { # TODO, benchmarking ainda não implementado
+    } else { # TODO, benchmarking ainda não implementado
       pfs_in_sample <- 1  # Quantos pfs vamos criar para passar no benchmark
       while (pfs_in_sample<max_pfs){
         sampled_pfs <- replicate(pfs_in_sample, sample(tickers, size=n)) %>%
@@ -87,11 +87,10 @@ gera_samples <- function(market, timeout=False, constant_sample_size=False){
         if (estimated_time>timeout){
           break
         }
-        last_samples <- sort(sampled_pfs)  
-        # Sort logo na base pra que tudo que for feito esteja empre em ordem alfabética
-        # Faz com que não se precise sortar em outros lugares
-        pfs_in_sample <- pfs_in_sample+1
+        last_samples <- sampled_pfs
+        # FIXME TODA ESSA SESSÂO NÃO ESTÁ IMPLEMENTADA
       }
+      pfs_in_sample <- pfs_in_sample+1
     }
     info_levels <- add_row(info_levels,
                            level = n,
@@ -193,12 +192,25 @@ plota_curva <- function(
   Recebe o output de gera_stats_sample, gera e outputa a curva de convergência
   Se save, salva. Se não, printa
   '
+  out_path <- file.path(
+    out_path, paste(as.character(sample), 'portfólios_calculados', sep='_')
+    )
+  dir.create(out_path, showWarnings = FALSE)
   if (risk == 'StdDev'){
     tipo_risco <- 'Desvio Padrão'
   } else if (risk == 'VaR'){
     tipo_risco <- 'Estimated Tail Loss'
   }
-  mkt_desvpad <- market_return_value(market, size)$mkt_desvpad
+  forma_risco_mercado <- 'pesos segundo o o valor de cada ativos'
+  mkt_risk <- market_return_value(market, size, risk)$mkt_risk
+  if (weights == 'equal'){
+    mkt_risk <- tail(curva_convergencia$mean_desvpad, 1)
+    forma_risco_mercado <- 'pesos constantes'
+    
+  }  # Caso particular - No equal, queremos comparar com o risco máximo em PFs iguals
+  # Visto que não é propriamente uma técnica de otimização de PF
+  # Nos outros casos, comparamos com o risco do PF value-weighted, que é mais próximo
+  # da forma de composição da maior parte dos índices
   subtitulo <- gera_subtitulo(sample, timeout, weights, risk)
   data_graph <- curva_convergencia %>% # Tranformações para o gráfico ficar mais bonito
     mutate(
@@ -215,6 +227,7 @@ plota_curva <- function(
       upper_sd =  ifelse((pct_sampled==1), NA, mean_desvpad + sd_desvpads),
       lower_sd =  ifelse((pct_sampled==1), NA, mean_desvpad - sd_desvpads),
     )
+  # Cria o gráfico da curva de convergência
   ggplot(data = data_graph, mapping = aes(x = level)) + 
     geom_point(mapping = aes(y = mean_desvpad, color = normal_text, shape = amostral_text)) +
     geom_line(mapping = aes(y = p025_amostral, linetype = "P[0.025, 0.975]")) +
@@ -226,12 +239,14 @@ plota_curva <- function(
     ),
     alpha = 0.3) +
     geom_hline(mapping = aes(
-      yintercept = mkt_desvpad, linetype = paste(tipo_risco, ' do mercado', sep="")
+      yintercept = mkt_risk, linetype = paste(
+        tipo_risco[[1]], ' do mercado, ',
+        forma_risco_mercado, sep="")
     )) +
-    labs(x = "Tamanho do portfólio (Quantidade de ações contidas)", y = tipo_risco) +
+    labs(x = "Tamanho do portfólio (Quantidade de ações contidas)", y = tipo_risco[[1]]) +
     labs(title = paste(
       "Convergência do ", 
-      tipo_risco, 
+      tipo_risco[[1]], 
       " de portfólios aleatórios para o do mercado",
       sep=""
       )) +
@@ -242,12 +257,10 @@ plota_curva <- function(
     labs(linetype = NULL) +
     labs(line='t') +
     theme_minimal()
-  if (save){
-    filename <- gera_filename(
-      out_path, ext, list(as.character(sample), 'timeout', as.character(timeout))
+  filename <- file.path(
+    out_path, paste('curva_convergencia.', ext, sep="")
     )
-    ggsave(filename, width=450, height=200, units = 'mm')
-  }
+  ggsave(filename, width=450, height=200, units = 'mm')
 }
 
 
@@ -308,13 +321,15 @@ graficos_normalidade <- function(samples, out_path, weight, risk, ext='.png'){
                           ' ações por portfólio\n',
                           pesos_risk_title,
                           sep = ''
-                          ), x = 0, hjust = 0)
+                          ),
+                          x = 0.01, hjust = 0,
+                          gp = grid::gpar(fontsize = 14, fontface = 'bold'))
                         ),
            width=210, height=297, units = 'mm'
     )
     
     level <- level + 1
-    # TODO outputtar a tibble em RDS
+
   }
 }
 
@@ -327,9 +342,9 @@ size <- IBOV_Data %>%  # Processamentos básicos com size para os PFs valueweigh
   mutate(market_cap = Qtde * share) %>%
   mutate(tickers_sa = paste(Ticker, '.SA', sep=""))
 
-sample_sizes <- c(50, 500, 5000, 50000, 500000)
-#sample_sizes <- c(50)
-weights <- c('equal', 'value', 'sharpe', 'GMV', 'min_SD_SA_R_Market')
+#sample_sizes <- c(50000)  # Rodando o cheio, 500 e 50k
+sample_sizes <- c(5)
+weights <- c('value', 'sharpe', 'GMV', 'min_SD_SA_R_Market', 'equal')
 risks <- c('StdDev', 'VaR')
 out_path <- 'C:/Users/josez/Desktop/Economia/FEA/TCC/graficos'
 
@@ -342,6 +357,14 @@ for (sample_size in sample_sizes){
   )
   for (risk in risks){
     for (weight in weights){
+      print(
+        paste(
+          'Rodando para ', as.character(sample_size), ' portfólios por nível',
+          sep = ""
+        )
+      )
+      print(paste("Métrica de risco: ", risk, sep = ""))
+      print(paste('Algoritmo de pesos: ', weight, sep = ""))
       desvpads_por_nivel <- gera_pontos(
         info_levels = info_levels,
         market = market,
@@ -356,7 +379,7 @@ for (sample_size in sample_sizes){
         curva_convergencia = desvpads_por_nivel,
         sample = sample_size,
         size = size,
-        out_path = file.path(out_path_weight, 'curva_convergencia/curva_convergencia'),
+        out_path = file.path(out_path_weight, 'curva_convergencia/'),
         weights = weight,
         risk = risk
       )
@@ -369,5 +392,4 @@ for (sample_size in sample_sizes){
     }
   }
 }
-# TODO mostrar os desvpad como razão do desvpad ideal em uma tabela
 # TODO adicionar aleatorização do T0

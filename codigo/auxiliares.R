@@ -8,7 +8,7 @@ format_weights_risk <- function(weight, risk){
   } else if (weight=='GMV'){
     pesos_title <- "Pesos: GMV"
   } else if (weight=='min_SD_SA_R_Market'){
-    pesos_title <- "Pesos:  minimo SD que atinge o retorno do mercado"
+    pesos_title <- "Pesos:  menor risco que atinge o retorno do mercado"
   } else if (weight=='value'){
     pesos_title <- "Pesos: Segundo o valor total de mercado de cada ativo"
   }
@@ -59,7 +59,7 @@ gera_filename <- function(out_path, ext = 'png', infos){
 }
 
 
-market_return_value <- function(market, sizes){
+market_return_value <- function(market, sizes, risk){
   weights_vector <- size %>%
     subset(tickers_sa %in% colnames(market)) %>%
     mutate(pesos_efetivos = market_cap/sum(market_cap)) %>%
@@ -77,9 +77,52 @@ market_return_value <- function(market, sizes){
   desvpad  <- StdDev(
     R = returns
   )
+  var <- -ETL(
+    R=returns, p=0.95, method='gaussian'
+    )
+  if (risk=='VaR'){
+    metr_risco <- var[[1]]
+  } else if (risk=='StdDev'){
+    metr_risco <- desvpad
+  }
+
   result <- tibble(
     mkt_returns = r,
-    mkt_desvpad = desvpad
+    mkt_risk = metr_risco
   )
 }
 
+
+salva_tabela_dados <- function(out_path, curva_convergencia){
+  '
+  Gera a tabela de desvpads comparados
+  Salva a tabela tabela e os dados calculados
+  '
+  
+  filename_tabela <- paste(
+    out_path, '/tabela', '.png', sep=""
+  )
+  gg_save(filename_tabela)
+  # TODO gerar tabela
+  
+  # Output dos dados brutos
+  filename_agregados <- paste(
+    out_path, '/dados_agregados', '.csv', sep=""
+  )
+  dados_agregados <- curva_convergencia %>%
+    select(-c(desvpads, samples)) %>%
+    write.table(file = filename_agregados)
+  filename_desvpads <- paste(
+    out_path, '/dados_desvpads', '.csv', sep=""
+  )
+  desvpads <- curva_convergencia$desvpads %>%
+    write.table(file = filename_desvpads)
+  
+  filename_samples <- paste(
+    out_path, '/dados_desvpads', '.csv', sep=""
+  )
+  samples <- curva_convergencia$samples %>%
+    write.table(file = filename_samples)
+}
+
+  

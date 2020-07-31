@@ -90,7 +90,7 @@ gen_minSD_SA_RMarket <- function(market, pf, risk, size){
   #HACK no meio tempo do TODO acima, ficamos com o R observado do Ibov
   R = 0.015  # Retono do IBOV no período
   # Retorno do mercado value weighted
-  r <- market_return_value(market, size)$mkt_returns
+  r <- market_return_value(market, size, risk)$mkt_returns
   
   dados_pf <- (market[, pf])
   pf_spec <- portfolio.spec(pf)
@@ -105,7 +105,7 @@ gen_minSD_SA_RMarket <- function(market, pf, risk, size){
   pf_spec <- add.constraint(
     portfolio = pf_spec,
     type = "return",
-    return_target = R
+    return_target = r
     )
   if (risk=="StdDev") {
     pf_spec <- add.objective(
