@@ -9,7 +9,7 @@ library(PerformanceAnalytics)
 library(stringi)
 source('funcs_pesos.R')
 source('auxiliares.R')
-
+# SE EU ESTIVER AQUI DEU BOM
 
 normality_by_moments <- function(sample, sig = 1){
   'Testes de normalidade como o Shapiro e o JB falham em amostras muito grandes
@@ -180,8 +180,6 @@ gera_pontos <- function(info_levels, market, weights, risk, size){
   return(curva_convergencia)
 }
 
-
-
 # Plotters
 
 plota_curva <- function(
@@ -261,6 +259,9 @@ plota_curva <- function(
     out_path, paste('curva_convergencia.', ext, sep="")
     )
   ggsave(filename, width=450, height=200, units = 'mm')
+  salva_tabela_dados(
+  filename, curva_convergencia
+  )
 }
 
 
@@ -334,17 +335,16 @@ graficos_normalidade <- function(samples, out_path, weight, risk, ext='.png'){
 }
 
 
-
 # Teste sem timeout:
-load("C:/Users/josez/Desktop/Economia/FEA/TCC/dados/IbovData.RDS") # Dados do IBOV já tydied
+load("C:/Users/josez/Desktop/Economia/FEA/TCC/dados/IbovData_2.RDS") # Dados do IBOV já tydied
 market <- IBOV_Returns_Final
 size <- IBOV_Data %>%  # Processamentos básicos com size para os PFs valueweighted
   mutate(market_cap = Qtde * share) %>%
   mutate(tickers_sa = paste(Ticker, '.SA', sep=""))
 
-#sample_sizes <- c(50000)  # Rodando o cheio, 500 e 50k
-sample_sizes <- c(5)
-weights <- c('value', 'sharpe', 'GMV', 'min_SD_SA_R_Market', 'equal')
+sample_sizes <- c(500, 5000, 50000)  # Rodando o cheio, 500 e 50k
+#sample_sizes <- c(5)
+weights <- c('value', 'equal', 'sharpe', 'GMV', 'min_SD_SA_R_Market')
 risks <- c('StdDev', 'VaR')
 out_path <- 'C:/Users/josez/Desktop/Economia/FEA/TCC/graficos'
 

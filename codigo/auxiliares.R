@@ -99,10 +99,10 @@ salva_tabela_dados <- function(out_path, curva_convergencia){
   Salva a tabela tabela e os dados calculados
   '
   
-  filename_tabela <- paste(
-    out_path, '/tabela', '.png', sep=""
-  )
-  gg_save(filename_tabela)
+#  filename_tabela <- paste(
+#    out_path, '/tabela', '.png', sep=""
+#  )
+#  gg_save(filename_tabela)
   # TODO gerar tabela
   
   # Output dos dados brutos
@@ -112,6 +112,7 @@ salva_tabela_dados <- function(out_path, curva_convergencia){
   dados_agregados <- curva_convergencia %>%
     select(-c(desvpads, samples)) %>%
     write.table(file = filename_agregados)
+
   filename_desvpads <- paste(
     out_path, '/dados_desvpads', '.csv', sep=""
   )
