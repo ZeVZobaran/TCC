@@ -122,7 +122,7 @@ gera_stats_sample <- function(sample, market, weights, risk, size, return=FALSE)
   } else if (weights == 'sharpe'){
     func_weights <- gen_sharpe
   } else if (weights == 'value'){
-    func_weights <- gen_value # TODO
+    func_weights <- gen_value
   }  # Selector da função para calcular pesos
 
   level_desvpads <- tibble(
@@ -199,8 +199,8 @@ plota_curva <- function(
   } else if (risk == 'VaR'){
     tipo_risco <- 'Estimated Tail Loss'
   }
-  forma_risco_mercado <- 'pesos segundo o o valor de cada ativos'
-  mkt_risk <- market_return_value(market, size, risk)$mkt_risk
+  forma_risco_mercado <- 'pesos constantes'
+  mkt_risk <- market_return_equally(market, size, risk)$mkt_risk
   if (weights == 'equal'){
     mkt_risk <- tail(curva_convergencia$mean_desvpad, 1)
     forma_risco_mercado <- 'pesos constantes'
@@ -255,12 +255,14 @@ plota_curva <- function(
     labs(linetype = NULL) +
     labs(line='t') +
     theme_minimal()
+
+
   filename <- file.path(
     out_path, paste('curva_convergencia.', ext, sep="")
     )
   ggsave(filename, width=450, height=200, units = 'mm')
   salva_tabela_dados(
-  filename, curva_convergencia
+  out_path, curva_convergencia
   )
 }
 
@@ -343,7 +345,7 @@ size <- IBOV_Data %>%  # Processamentos básicos com size para os PFs valueweigh
   mutate(tickers_sa = paste(Ticker, '.SA', sep=""))
 
 sample_sizes <- c(500, 5000, 50000)  # Rodando o cheio, 500 e 50k
-#sample_sizes <- c(5)
+#sample_sizes <- c(5)  # Rodando o parcial
 weights <- c('value', 'equal', 'sharpe', 'GMV', 'min_SD_SA_R_Market')
 risks <- c('StdDev', 'VaR')
 out_path <- 'C:/Users/josez/Desktop/Economia/FEA/TCC/graficos'

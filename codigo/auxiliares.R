@@ -59,7 +59,41 @@ gera_filename <- function(out_path, ext = 'png', infos){
 }
 
 
+market_return_equally <- function(market, size='', risk){
+  '
+  Portfólio cujos ativos tem pesos constantes
+  '
+  dados_pf <- market
+  desvpad  <- StdDev(
+    R = dados_pf,
+    portfolio_method = 'component'
+  )  # Se nenhum peso é dado, ele supoe equally weighted
+  returns <- Return.portfolio(
+    R = dados_pf
+  )
+  r = Return.cumulative(returns)
+  if (risk=='StdDev'){
+    risco <- desvpad$StdDev
+  }else if (risk == 'VaR'){  # Calculando o ETL
+    var <- -ETL(
+      R=returns, p=0.95, method='gaussian'
+    )
+    risco <- var[[1]]
+  }
+
+  result <- tibble(
+    mkt_returns = r,
+    mkt_risk = risco
+  )
+}
+
+
 market_return_value <- function(market, sizes, risk){
+  '
+  Gera o retorno do portfólio de mercado value weighted
+  Como não temos o valor de mercado das empressas em cada ponto, não usamos
+  ao invés disso, usamos a market_return_equally
+  '
   weights_vector <- size %>%
     subset(tickers_sa %in% colnames(market)) %>%
     mutate(pesos_efetivos = market_cap/sum(market_cap)) %>%
@@ -68,7 +102,7 @@ market_return_value <- function(market, sizes, risk){
   weights_vector <- weights_vector %>%
     select(pesos_efetivos) %>%
     t()
-  rownames(weights_vector) <- '2007-09-30'
+  rownames(weights_vector) <- '2004-01-01'
 
   returns <- Return.portfolio(
     R = market, weights = weights_vector, rebalance_on = 'months'
@@ -116,14 +150,19 @@ salva_tabela_dados <- function(out_path, curva_convergencia){
   filename_desvpads <- paste(
     out_path, '/dados_desvpads', '.csv', sep=""
   )
+  sample_size <- length(curva_convergencia$desvpads[[20]])  # Descobre o samplesize de forma introspective
+  for (nivel in 1:length(curva_convergencia$desvpads)){   # tentei fazer em map, falhei
+    # Adiciona FALSE à lista de desvpads para que todas fiquem do mesmo tamanho e sejam comparáveis p/ tibblar
+    desvpads_nivel <- curva_convergencia$desvpads[[nivel]]
+    print(nivel)
+    if (length(desvpads_nivel) < sample_size){
+      print('corrigindo')
+      false_list <- rep(FALSE, sample_size - length(desvpads_nivel))
+      curva_convergencia$desvpads[[nivel]] <- c(desvpads_nivel, false_list)
+    }
+  }
   desvpads <- curva_convergencia$desvpads %>%
+    as_tibble(.name_repair='minimal') %>%
     write.table(file = filename_desvpads)
-  
-  filename_samples <- paste(
-    out_path, '/dados_desvpads', '.csv', sep=""
-  )
-  samples <- curva_convergencia$samples %>%
-    write.table(file = filename_samples)
 }
 
-  
